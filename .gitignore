@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Model weights & large files
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.gguf
+*.onnx
+models/
+checkpoints/
+weights/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Logs & temp
+*.log
+logs/
+tmp/
+temp/
