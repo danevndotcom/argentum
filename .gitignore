@@ -4,46 +4,40 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-venv/
 .venv/
+venv/
 ENV/
-env.bak/
-venv.bak/
+env/
 *.egg-info/
 dist/
 build/
-.eggs/
 
-# Model weights & large files
+# Environment & secrets
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Models & large files
 *.bin
-*.pt
-*.pth
-*.safetensors
 *.gguf
-*.onnx
+*.safetensors
 models/
 checkpoints/
-weights/
+*.pt
+*.pth
 
-# Jupyter
-.ipynb_checkpoints/
-
-# IDE / OS
+# IDE & OS
 .DS_Store
 .idea/
 .vscode/
 *.swp
 *~
 
-# Secrets
-.env
-.env.*
-*.key
-*.pem
-
-# Logs & temp
-*.log
+# Local data / experiments
+data/raw/
+outputs/
 logs/
-tmp/
-temp/
+*.log
