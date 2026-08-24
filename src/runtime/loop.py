@@ -2,21 +2,27 @@
 Argentum runtime — core control loop.
 
 Implements Observe -> Reason -> Plan -> Act -> Verify -> Recover as a real
-orchestrator. Each phase is a typed function with a single responsibility.
-This file intentionally contains no model-specific logic; that belongs in
-src/model, called from inside reason()/plan() once a client is wired in.
+orchestrator. observe/act/verify are wired to real filesystem behavior for
+the hello-world task (create ping.txt containing "pong"). reason/plan stay
+as pass-throughs for now — there's no real decision to make on a fixed,
+single-step task. That's the next thing to build once there's more than
+one task.
 
-Drop this in as src/runtime/loop.py.
+Drop this in as src/runtime/loop.py (overwrite the previous version).
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("argentum.loop")
+
+TARGET_FILE = "ping.txt"
+TARGET_CONTENT = "pong"
 
 
 @dataclass
@@ -40,44 +46,57 @@ class TaskState:
 
 
 def observe(state: TaskState) -> TaskState:
-    """Gather current environment state relevant to the goal.
-
-    v0.1 stub — replace with real filesystem / git status inspection.
-    """
-    state.observation = "TODO: real observation of repo state"
+    """Check whether the target file currently exists and what it holds."""
+    if os.path.exists(TARGET_FILE):
+        with open(TARGET_FILE) as f:
+            state.observation = f"{TARGET_FILE} exists, contains: {f.read()!r}"
+    else:
+        state.observation = f"{TARGET_FILE} does not exist"
     state.log_phase("observe", state.observation)
     return state
 
 
 def reason(state: TaskState) -> TaskState:
-    """Interpret the observation against the goal. Model call goes here."""
+    """Interpret the observation against the goal.
+
+    Fixed single-step task, so there's nothing to decide yet — this becomes
+    a real model call once tasks require judgment.
+    """
     state.log_phase("reason", f"goal={state.goal!r}")
     return state
 
 
 def plan(state: TaskState) -> TaskState:
-    """Produce an ordered list of concrete actions."""
-    state.plan = ["TODO: real plan step"]
+    """Produce the action to take."""
+    state.plan = [f"write {TARGET_CONTENT!r} to {TARGET_FILE}"]
     state.log_phase("plan", state.plan)
     return state
 
 
 def act(state: TaskState) -> TaskState:
-    """Execute the plan's next action against the real environment."""
-    state.action_result = "TODO: real action execution"
+    """Execute the plan against the real filesystem."""
+    with open(TARGET_FILE, "w") as f:
+        f.write(TARGET_CONTENT)
+    state.action_result = f"wrote {TARGET_CONTENT!r} to {TARGET_FILE}"
     state.log_phase("act", state.action_result)
     return state
 
 
 def verify(state: TaskState) -> TaskState:
-    """Check the action against ground truth (e.g. did tests pass)."""
-    state.verified = False  # TODO: real verification
+    """Check the action against ground truth: does the file exist and hold
+    exactly the expected content?"""
+    if os.path.exists(TARGET_FILE):
+        with open(TARGET_FILE) as f:
+            content = f.read().strip()
+        state.verified = content == TARGET_CONTENT
+    else:
+        state.verified = False
     state.log_phase("verify", state.verified)
     return state
 
 
 def recover(state: TaskState) -> TaskState:
-    """Decide how to adjust the plan before the next attempt."""
+    """Decide how to adjust before the next attempt."""
     state.attempts += 1
     state.log_phase("recover", f"retrying, attempt={state.attempts}")
     return state
@@ -116,8 +135,6 @@ def run_loop(task_id: str, goal: str, max_attempts: int = 3) -> TaskState:
 
 
 if __name__ == "__main__":
-    # Hello-world smoke test: proves the loop executes end to end and
-    # produces a trace, before any real logic is wired in.
-    result = run_loop(task_id="hello-world", goal="create ping.txt containing pong")
+    result = run_loop(task_id="hello-world", goal=f"create {TARGET_FILE} containing {TARGET_CONTENT}")
     print(f"\nFinal state: verified={result.verified}, attempts={result.attempts}")
     print(f"Trace has {len(result.trace)} entries.")
