@@ -41,3 +41,5 @@ data/raw/
 outputs/
 logs/
 *.log
+ping.txt
+sandbox/

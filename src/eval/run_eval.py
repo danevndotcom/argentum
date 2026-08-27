@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.eval.tasks.task_01_create_ping import run_task as task_01
+from src.eval.tasks.task_02_create_nested_file import run_task as task_02
 
 
 def main():
@@ -19,6 +20,7 @@ def main():
 
     tasks = [
         ("task_01_create_ping", task_01),
+        ("task_02_create_nested_file", task_02),
     ]
 
     results = []

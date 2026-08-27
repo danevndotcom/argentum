@@ -7,8 +7,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-import time
-import os
 
 
 @dataclass
@@ -31,6 +29,8 @@ class ArgentumRuntime:
     def __init__(self, workspace: Path | None = None):
         self.workspace = workspace or Path.cwd()
         self.trace: list[TraceEntry] = []
+        self.target_path: Path | None = None
+        self.target_content: str | None = None
 
     def _log(self, phase: str, message: str, success: bool = True, **data):
         entry = TraceEntry(phase=phase, message=message, success=success, data=data)
@@ -57,20 +57,16 @@ class ArgentumRuntime:
         return observation
 
     def reason(self, observation: dict[str, Any]) -> str:
-        """Simple reasoning about what needs to happen."""
-        goal = observation["goal"].lower()
-        if "ping.txt" in goal or "create a file" in goal:
-            thought = "Goal requires creating a file named ping.txt with content 'pong'."
-        else:
-            thought = f"Goal is: {observation['goal']}. Will attempt a generic file action."
+        """Reasoning about what needs to happen, based on this run's target."""
+        thought = f"Goal requires writing {self.target_content!r} to {self.target_path}."
         self._log("reason", thought)
         return thought
 
     def plan(self, thought: str) -> list[str]:
         """Produce a short list of concrete steps."""
         steps = [
-            "Create file ping.txt",
-            "Write content 'pong' into it",
+            f"Create file {self.target_path}",
+            f"Write content {self.target_content!r} into it",
             "Verify the file exists and has correct content",
         ]
         self._log("plan", f"{len(steps)} steps planned", steps=steps)
@@ -78,16 +74,16 @@ class ArgentumRuntime:
 
     def act(self, steps: list[str]) -> dict[str, Any]:
         """Execute the planned actions on the filesystem."""
-        target = self.workspace / "ping.txt"
+        target = self.workspace / self.target_path
         try:
-            target.write_text("pong\n", encoding="utf-8")
+            target.write_text(self.target_content + "\n", encoding="utf-8")
             result = {
                 "action": "write_file",
                 "path": str(target),
-                "content": "pong",
+                "content": self.target_content,
                 "success": True,
             }
-            self._log("act", f"Created {target.name} with content 'pong'")
+            self._log("act", f"Created {target.name} with content {self.target_content!r}")
             return result
         except Exception as e:
             result = {"action": "write_file", "success": False, "error": str(e)}
@@ -96,12 +92,12 @@ class ArgentumRuntime:
 
     def verify(self, action_result: dict[str, Any]) -> bool:
         """Check whether the action actually succeeded."""
-        target = self.workspace / "ping.txt"
+        target = self.workspace / self.target_path
         exists = target.exists()
         content_ok = False
         if exists:
             content = target.read_text(encoding="utf-8").strip()
-            content_ok = content == "pong"
+            content_ok = content == self.target_content
 
         success = exists and content_ok
         msg = "File exists and content is correct" if success else "Verification failed"
@@ -109,15 +105,22 @@ class ArgentumRuntime:
         return success
 
     def recover(self, failed: bool) -> bool:
-        """If something failed, try a simple recovery."""
+        """If something failed, diagnose and actually fix the environment before retrying."""
         if not failed:
             self._log("recover", "No recovery needed")
             return True
 
-        self._log("recover", "Attempting recovery: re-create the file")
-        target = self.workspace / "ping.txt"
+        target = self.workspace / self.target_path
+        parent = target.parent
+
+        if not parent.exists():
+            parent.mkdir(parents=True, exist_ok=True)
+            self._log("recover", f"Created missing directory {parent}, retrying write")
+        else:
+            self._log("recover", "Directory already exists, retrying write")
+
         try:
-            target.write_text("pong\n", encoding="utf-8")
+            target.write_text(self.target_content + "\n", encoding="utf-8")
             self._log("recover", "Recovery write succeeded")
             return True
         except Exception as e:
@@ -128,8 +131,11 @@ class ArgentumRuntime:
     # Orchestrator
     # ------------------------------------------------------------------
 
-    def run(self, goal: str) -> RunResult:
+    def run(self, goal: str, target_path: str = "ping.txt", target_content: str = "pong") -> RunResult:
         self.trace = []
+        self.target_path = Path(target_path)
+        self.target_content = target_content
+
         print(f"\n{'='*60}")
         print(f"ARGENTUM  |  Goal: {goal}")
         print(f"{'='*60}\n")
@@ -142,7 +148,6 @@ class ArgentumRuntime:
 
         if not verified:
             recovered = self.recover(failed=True)
-            # Re-verify after recovery
             verified = self.verify(action_result) if recovered else False
         else:
             self.recover(failed=False)
@@ -155,7 +160,7 @@ class ArgentumRuntime:
             goal=goal,
             success=verified,
             trace=self.trace,
-            final_state={"ping.txt_exists": (self.workspace / "ping.txt").exists()},
+            final_state={f"{self.target_path}_exists": (self.workspace / self.target_path).exists()},
         )
 
 
