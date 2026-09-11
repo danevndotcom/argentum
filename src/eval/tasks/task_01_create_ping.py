@@ -10,11 +10,15 @@ from src.runtime.loop import ArgentumRuntime
 
 
 def run_task(workspace: Optional[Path] = None) -> Dict[str, Any]:
+    ws = workspace or Path.cwd()
+    # Clean state: ensure ping.txt does not exist before the task starts.
+    (ws / "ping.txt").unlink(missing_ok=True)
+
     runtime = ArgentumRuntime(workspace=workspace)
     goal = "Create a file named ping.txt containing pong, then verify it exists"
     result = runtime.run(goal)
 
-    target = (workspace or Path.cwd()) / "ping.txt"
+    target = ws / "ping.txt"
     exists = target.exists()
     content_ok = False
     if exists:

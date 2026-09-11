@@ -31,6 +31,8 @@ class ArgentumRuntime:
         self.trace: list[TraceEntry] = []
         self.target_path: Path | None = None
         self.target_content: str | None = None
+        self.pre_existed: bool = False
+        self.pre_content: str | None = None
 
     def _log(self, phase: str, message: str, success: bool = True, **data):
         entry = TraceEntry(phase=phase, message=message, success=success, data=data)
@@ -43,29 +45,52 @@ class ArgentumRuntime:
     # ------------------------------------------------------------------
 
     def observe(self, goal: str) -> dict[str, Any]:
-        """Look at the current state of the workspace."""
+        """Look at the current state of the workspace, including the target file."""
         files = sorted([p.name for p in self.workspace.iterdir() if p.is_file()])
         dirs = sorted([p.name for p in self.workspace.iterdir() if p.is_dir()])
+
+        target = self.workspace / self.target_path
+        self.pre_existed = target.exists()
+        self.pre_content = (
+            target.read_text(encoding="utf-8").strip() if self.pre_existed else None
+        )
 
         observation = {
             "cwd": str(self.workspace),
             "files": files,
             "dirs": dirs,
             "goal": goal,
+            "target_exists": self.pre_existed,
+            "target_current_content": self.pre_content,
         }
         self._log("observe", f"Workspace has {len(files)} files, {len(dirs)} dirs", data=observation)
         return observation
 
     def reason(self, observation: dict[str, Any]) -> str:
-        """Reasoning about what needs to happen, based on this run's target."""
-        thought = f"Goal requires writing {self.target_content!r} to {self.target_path}."
+        """Reason about what needs to happen, based on observed state."""
+        if self.pre_existed:
+            if self.pre_content == self.target_content:
+                thought = (
+                    f"{self.target_path} already contains {self.target_content!r}; no change needed."
+                )
+            else:
+                thought = (
+                    f"{self.target_path} exists but contains {self.pre_content!r}; "
+                    f"must be MODIFIED to contain {self.target_content!r}."
+                )
+        else:
+            thought = (
+                f"{self.target_path} does not exist; must be CREATED with content "
+                f"{self.target_content!r}."
+            )
         self._log("reason", thought)
         return thought
 
     def plan(self, thought: str) -> list[str]:
         """Produce a short list of concrete steps."""
+        verb = "Modify" if self.pre_existed else "Create"
         steps = [
-            f"Create file {self.target_path}",
+            f"{verb} file {self.target_path}",
             f"Write content {self.target_content!r} into it",
             "Verify the file exists and has correct content",
         ]
@@ -75,19 +100,22 @@ class ArgentumRuntime:
     def act(self, steps: list[str]) -> dict[str, Any]:
         """Execute the planned actions on the filesystem."""
         target = self.workspace / self.target_path
+        existed_before = self.pre_existed
         try:
             target.write_text(self.target_content + "\n", encoding="utf-8")
+            verb = "Modified" if existed_before else "Created"
             result = {
                 "action": "write_file",
                 "path": str(target),
                 "content": self.target_content,
+                "verb": verb.lower(),
                 "success": True,
             }
-            self._log("act", f"Created {target.name} with content {self.target_content!r}")
+            self._log("act", f"{verb} {target.name} with content {self.target_content!r}")
             return result
         except Exception as e:
             result = {"action": "write_file", "success": False, "error": str(e)}
-            self._log("act", f"Failed to create file: {e}", success=False)
+            self._log("act", f"Failed to write {target.name}: {e}", success=False)
             return result
 
     def verify(self, action_result: dict[str, Any]) -> bool:
