@@ -1,47 +1,28 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+*.pyo
+*.pyd
+
+# Dependencies
 .venv/
 venv/
-ENV/
 env/
-*.egg-info/
+.env
+.env.local
+*.env.*
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Editors
+.vscode/
+.idea/
+
+# Build artifacts
 dist/
 build/
-
-# Environment & secrets
-.env
-.env.*
-*.pem
-*.key
-id_rsa*
-id_ed25519*
-
-# Models & large files
-*.bin
-*.gguf
-*.safetensors
-models/
-checkpoints/
-*.pt
-*.pth
-
-# IDE & OS
-.DS_Store
-.idea/
-.vscode/
-*.swp
-*~
-
-# Local data / experiments
-data/raw/
-outputs/
-logs/
-*.log
-ping.txt
-sandbox/
-config.txt
-config.txt
+target/
