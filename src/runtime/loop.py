@@ -132,33 +132,35 @@ class ArgentumRuntime:
         self._log("verify", msg, success=success, exists=exists, content_ok=content_ok)
         return success
 
-    def recover(self, failed: bool) -> bool:
-        """If something failed, diagnose and actually fix the environment before retrying."""
-        if not failed:
-            self._log("recover", "No recovery needed")
-            return True
-
-        target = self.workspace / self.target_path
-        parent = target.parent
-
-        if not parent.exists():
-            parent.mkdir(parents=True, exist_ok=True)
-            self._log("recover", f"Created missing directory {parent}, retrying write")
-        else:
-            self._log("recover", "Directory already exists, retrying write")
-
-        try:
-            target.write_text(self.target_content + "\n", encoding="utf-8")
-            self._log("recover", "Recovery write succeeded")
-            return True
-        except Exception as e:
-            self._log("recover", f"Recovery failed: {e}", success=False)
+    def recover(self, *args, **kwargs) -> bool:
+        import os, stat
+        if not self.target_path:
             return False
 
-    # ------------------------------------------------------------------
-    # Orchestrator
-    # ------------------------------------------------------------------
+        parent = self.target_path.parent
+        if not parent.exists():
+            try:
+                parent.mkdir(parents=True, exist_ok=True)
+                self._log("recover", f"Created missing directory {parent}", True)
+            except Exception as e:
+                self._log("recover", f"Failed to create directory {parent}: {e}", False)
+                return False
 
+        if self.target_path.exists():
+            try:
+                os.chmod(self.target_path, stat.S_IRUSR | stat.S_IWUSR)
+                self._log("recover", f"Reset write permissions on {self.target_path.name}", True)
+            except Exception as e:
+                self._log("recover", f"Permission reset failed: {e}", False)
+                return False
+
+        try:
+            self.target_path.write_text(self.target_content or "", encoding="utf-8")
+            self._log("recover", "Recovery write succeeded", True)
+            return True
+        except Exception as e:
+            self._log("recover", f"Recovery failed: {e}", False)
+            return False
     def run(self, goal: str, target_path: str = "ping.txt", target_content: str = "pong") -> RunResult:
         self.trace = []
         self.target_path = Path(target_path)

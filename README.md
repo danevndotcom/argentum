@@ -1,73 +1,42 @@
-# ARGENTUM
+# Argentum
 
-### An agentic language model designed for autonomous execution.
+An experimental execution runtime and evaluation harness for autonomous agents.
 
-> **Observe → Reason → Plan → Act → Verify → Recover**
+> **Thesis:** Most LLMs are optimized to generate the next token. Argentum investigates execution architecture designed around completing a goal:  
+> 
 
-Argentum is an experimental language model and runtime exploring a different approach to AI systems: designing around **autonomous execution**, rather than conversation alone.
+---
 
-## The idea
+## 📊 Benchmark Suite (Argentum Agentic Benchmark - AAB)
 
-Most LLMs are designed primarily to generate useful responses.
+Deterministic baselines established before introducing model-driven reasoning.
 
-Argentum explores what happens when the primary objective becomes:
+| Task | Description | Status | Recovery Triggered |
+|---|---|:---:|:---:|
+| **AAB-1** | Basic file creation & exact content verification | ✅ PASS | No |
+| **AAB-2** | Nested directory creation & path handling | ✅ PASS | Yes (Directory repair) |
+| **AAB-3** | Inspect and update stale configuration state | ✅ PASS | No |
+| **AAB-4** | Permission lock & read-only error recovery | ✅ PASS | Yes (Permission reset) |
+| **AAB-5** | Multi-step dependent execution | ⏳ Up Next | — |
 
-**Take a goal. Execute it. Verify the result. Recover from failure.**
+---
 
-## Architecture
+## 🛠 Execution Architecture
 
-```text
-Goal
- ↓
-Observe
- ↓
-Reason
- ↓
-Plan
- ↓
-Act
- ↓
-Verify
- ↓
-Recover
- ↺
+Argentum implements its control flow as typed Python functions rather than prompt instructions:
+
+```
+[OBSERVE] -> Inspects actual workspace filesystem
+[REASON]  -> Interprets explicit goal requirements
+[PLAN]    -> Builds sequential execution strategy
+[ACT]     -> Performs filesystem operations
+[VERIFY]  -> Validates target state against ground truth
+[RECOVER] -> Catches failure state and executes repairs
 ```
 
-## Status
+## 🚀 Running the Evaluation Suite
 
-**Argentum v0.1 — Experimental**
-
-This project is under active development.
-
-The first phase focuses on:
-
-* Agent-oriented model behavior
-* Planning and execution
-* Tool use
-* Verification
-* Error recovery
-* Memory
-* Agentic evaluation
-
-## Philosophy
-
-Argentum is not intended to compete with frontier general-purpose models on raw scale.
-
-The research question is different:
-
-> **Can smaller, purpose-built language models become significantly better at autonomous execution?**
-
-## Roadmap
-
-* [ ] Define Argentum architecture
-* [ ] Build agentic training dataset
-* [ ] Fine-tune first model
-* [ ] Build Argentum runtime
-* [ ] Create agentic benchmark
-* [ ] Publish evaluation results
-* [ ] Release Argentum v0.1
-* [ ] Explore training a native Argentum architecture
-
-## Disclaimer
-
-Argentum is an experimental research project. Results, capabilities, and architecture are subject to change as the project develops.
+```bash
+source .venv/bin/activate
+python -m src.eval.run_eval
+```

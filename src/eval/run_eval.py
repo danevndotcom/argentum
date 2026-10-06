@@ -1,48 +1,31 @@
-"""
-Argentum Evaluation Runner – v0.1
-Runs the current set of tasks and prints a summary.
-"""
+from src.eval.tasks import (
+    task_01_create_ping,
+    task_02_create_nested_file,
+    task_03_fix_stale_config,
+    task_04_readonly_recovery,
+)
 
-from pathlib import Path
-import sys
-
-# Make sure we can import from src
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from src.eval.tasks.task_01_create_ping import run_task as task_01
-from src.eval.tasks.task_02_create_nested_file import run_task as task_02
-from src.eval.tasks.task_03_fix_stale_config import run_task as task_03
-
+TASKS = [
+    task_01_create_ping.run_task,
+    task_02_create_nested_file.run_task,
+    task_03_fix_stale_config.run_task,
+    task_04_readonly_recovery.run_task,
+]
 
 def main():
-    print("\n" + "=" * 60)
-    print("ARGENTUM EVALUATION  |  AAB-1 (seed)")
-    print("=" * 60 + "\n")
-
-    tasks = [
-        ("task_01_create_ping", task_01),
-        ("task_02_create_nested_file", task_02),
-        ("task_03_fix_stale_config", task_03),
-    ]
-
-    results = []
-    for name, fn in tasks:
-        print(f"→ Running {name} ...")
-        outcome = fn()
-        results.append(outcome)
-        status = "PASS" if outcome["success"] else "FAIL"
-        print(f"  {status}  (trace entries: {outcome['trace_length']})")
-        print()
-
-    passed = sum(1 for r in results if r["success"])
-    total = len(results)
-
     print("=" * 60)
-    print(f"SUMMARY: {passed}/{total} tasks passed")
-    print("=" * 60 + "\n")
-
-    return results
-
+    print("ARGENTUM EVALUATION SUITE")
+    print("=" * 60)
+    passed = 0
+    for task_fn in TASKS:
+        res = task_fn()
+        status = "PASS" if res.get("success") else "FAIL"
+        print(f"[{status}] {res.get('task_id')}")
+        if res.get("success"):
+            passed += 1
+    print("=" * 60)
+    print(f"SUMMARY: {passed}/{len(TASKS)} tasks passed")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()
