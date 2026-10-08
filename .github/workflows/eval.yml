@@ -1,0 +1,24 @@
+name: Argentum Benchmark Evaluation (AAB)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-eval:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Run AAB Benchmark Suite
+      run: |
+        python -m src.eval.run_eval
